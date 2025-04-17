@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
 
 static const char hex_digits[] = "0123456789abcdef";
 
@@ -108,7 +109,7 @@ unsigned char *base64_to_raw(const char *base64_str, size_t *out_len)
     if (!data)
         return NULL;
 
-    unsigned char decoding_table[64] = {0};
+    unsigned char decoding_table[256] = {0};
     build_decoding_table(decoding_table);
 
     size_t i, j;
@@ -140,9 +141,22 @@ unsigned char *base64_to_raw(const char *base64_str, size_t *out_len)
     return data;
 }
 
+// parte 2
+void xor_cipher(const unsigned char *plaintext,
+                const unsigned char *key,
+                unsigned char *ciphertext,
+                size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        ciphertext[i] = plaintext[i] ^ key[i];
+    }
+    ciphertext[len] = '\0'; // Adiciona o terminador nulo
+}
+
 int main()
 {
-
+    // parte 1
     const char *base64_input = "QWNvcmRhUGVkcmluaG9RdWVob2pldGVtY2FtcGVvbmF0bw==";
 
     size_t raw_len;
@@ -156,6 +170,30 @@ int main()
 
     free(raw_data);
     free(hex_output);
+
+    // parte 2
+    const char *hex_plaintext = "41636f72646150656472696e686f517565686f6a6574656d63616d70656f6e61746f";
+    const char *hex_key = "0b021e0701003e0a0d060c0807063d1a0b0f0e060a1a020c0f0e03170403010f130e";
+
+    size_t key_len, plaintext_len;
+    unsigned char *plaintext = hex_to_raw(hex_plaintext, &plaintext_len);
+    unsigned char *key = hex_to_raw(hex_key, &key_len);
+
+    unsigned char *raw_ciphertext = (unsigned char *)malloc(plaintext_len + 1);
+    xor_cipher(plaintext, key, raw_ciphertext, plaintext_len);
+
+    char *hex_ciphertext = raw_to_hex(raw_ciphertext, plaintext_len);
+    printf("Texto cifrado (hex): %s\n", hex_ciphertext);
+
+    printf("Texto cifrado: %s\n", raw_ciphertext);
+
+    free(raw_ciphertext);
+    free(hex_ciphertext);
+    free(plaintext);
+    free(key);
+
+    // parte 3
+    const char *hex_ciphertext2 = "072c232c223d2c3e3e2c2328232538202e2c3f3f223d223f2c3c3824072c232c223d2c3e3e2c2328232538202b24212028232c191b1b222e283c382828233f22212c2238393f222e242a2c3f3f223d223f2c2408232c22292c2f22212c3d3f223c38283b2c242c2e222339282e283f002c243e38203d22382e2228202c243e38203e282e38212239283f2024232c002c3e38202122382e223d222928393f222e22232c283e3c3824232c19382922243e3e22272c2b2c373d2c3f3928292c3f223924232c082c3f223924232c272c2b2c373d2c3f392829283b222e281c3828392820242928242c3e392c22202229283f232c3e082220283e202225222028203c38283b243b242c232c3e2e2c3b283f232c3e";
 
     return 0;
 }
