@@ -8,6 +8,8 @@ static const char hex_digits[] = "0123456789abcdef";
 
 static const char base64_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+const char portuguese_common_chars[] = " AEOSRINDMUTCLPVGHQBFZJXKWYaeosrindmutclpvghqbfzjxkwy";
+
 char *raw_to_hex(const unsigned char *raw_data, size_t len)
 {
     char *hex_str = malloc((len * 2) + 1);
@@ -154,6 +156,45 @@ void xor_cipher(const unsigned char *plaintext,
     ciphertext[len] = '\0'; // Adiciona o terminador nulo
 }
 
+void xor_cipher_byte(const unsigned char *in,
+                     unsigned char key,
+                     unsigned char *out,
+                     size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+        out[i] = in[i] ^ key;
+}
+
+// parte 3
+unsigned char find_xor_key(const unsigned char *ciphertext, size_t len)
+{
+    unsigned char best_key = 0;
+    double best_score = 0;
+
+    int key; // Declaração movida para fora do loop
+    for (key = 0; key < 256; key++)
+    {
+        double score = 0;
+
+        size_t i; // Declaração movida para fora do loop interno
+        for (i = 0; i < len; i++)
+        {
+            char decoded_char = ciphertext[i] ^ key;
+            if (strchr(portuguese_common_chars, decoded_char))
+            {
+                score++;
+            }
+        }
+
+        if (score > best_score)
+        {
+            best_score = score;
+            best_key = key;
+        }
+    }
+    return best_key;
+}
+
 int main()
 {
     // parte 1
@@ -190,10 +231,28 @@ int main()
     free(raw_ciphertext);
     free(hex_ciphertext);
     free(plaintext);
-    free(key);
 
     // parte 3
     const char *hex_ciphertext2 = "072c232c223d2c3e3e2c2328232538202e2c3f3f223d223f2c3c3824072c232c223d2c3e3e2c2328232538202b24212028232c191b1b222e283c382828233f22212c2238393f222e242a2c3f3f223d223f2c2408232c22292c2f22212c3d3f223c38283b2c242c2e222339282e283f002c243e38203d22382e2228202c243e38203e282e38212239283f2024232c002c3e38202122382e223d222928393f222e22232c283e3c3824232c19382922243e3e22272c2b2c373d2c3f3928292c3f223924232c082c3f223924232c272c2b2c373d2c3f392829283b222e281c3828392820242928242c3e392c22202229283f232c3e082220283e202225222028203c38283b243b242c232c3e2e2c3b283f232c3e";
+    size_t len2;
+    unsigned char *ciphertext2 = hex_to_raw(hex_ciphertext2, &len2);
+
+    unsigned char key2 = find_xor_key(ciphertext2, len2);
+    printf("Chave encontrada: %02x (%c)\n", key2, key2);
+
+    unsigned char *decoded = (unsigned char *)malloc(len2 + 1);
+    if (!decoded)
+    {
+        printf("Erro ao alocar memória\n");
+        free(ciphertext2);
+        return 1;
+    }
+
+    xor_cipher_byte(ciphertext2, key2, decoded, len2);
+
+    printf("Texto decifrado: %s\n", decoded);
+    free(decoded);
+    free(ciphertext2);
 
     return 0;
 }
