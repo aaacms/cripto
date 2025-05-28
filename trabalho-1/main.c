@@ -16,10 +16,11 @@ char *raw_to_hex(const unsigned char *raw_data, size_t len)
     if (!hex_str)
         return NULL;
 
-    for (size_t i = 0; i < len; i++)
+    size_t i;
+    for (i = 0; i < len; i++)
     {
-        hex_str[i * 2] = hex_digits[raw_data[i] >> 4];       // isola os 4 bits mais significativos
-        hex_str[i * 2 + 1] = hex_digits[raw_data[i] & 0x0F]; // isola os 4 bits menos significativos com máscara AND
+        hex_str[i * 2] = hex_digits[raw_data[i] >> 4];
+        hex_str[i * 2 + 1] = hex_digits[raw_data[i] & 0x0F];
     }
     hex_str[len * 2] = '\0';
     return hex_str;
@@ -35,8 +36,8 @@ unsigned char *hex_to_raw(const char *hex_str, size_t *out_len)
     unsigned char *raw_data = malloc(len);
     if (!raw_data)
         return NULL;
-
-    for (size_t i = 0; i < len; i++)
+    size_t i;
+    for (i = 0; i < len; i++)
     {
         char byte_str[3] = {hex_str[i * 2], hex_str[i * 2 + 1], '\0'};
         raw_data[i] = (unsigned char)strtol(byte_str, NULL, 16);
@@ -57,27 +58,24 @@ char *raw_to_base64(const unsigned char *data, size_t len)
     size_t i, j;
     for (i = 0, j = 0; i < len;)
     {
-        // Lê até três bytes; se não houver bytes suficientes, utiliza 0 para preencher.
+
         unsigned int octet_a = i < len ? data[i++] : 0;
         unsigned int octet_b = i < len ? data[i++] : 0;
         unsigned int octet_c = i < len ? data[i++] : 0;
 
-        // Combina os três bytes em um inteiro de 24 bits.
         unsigned int triple = (octet_a << 16) | (octet_b << 8) | octet_c;
 
-        // 0x3F == 0011 1111
         base64_str[j++] = base64_chars[(triple >> 18) & 0x3F];
         base64_str[j++] = base64_chars[(triple >> 12) & 0x3F];
         base64_str[j++] = base64_chars[(triple >> 6) & 0x3F];
         base64_str[j++] = base64_chars[triple & 0x3F];
     }
 
-    // calcula quantos '=' são necessários (0, 1 ou 2)
     size_t pad = (3 - (len % 3)) % 3;
 
     if (pad > 0)
     {
-        // preenche os últimos 'pad' caracteres com '='
+
         memset(base64_str + out_len - pad, '=', pad);
     }
 
@@ -87,7 +85,8 @@ char *raw_to_base64(const unsigned char *data, size_t len)
 
 void build_decoding_table(unsigned char *decoding_table)
 {
-    for (int i = 0; i < 64; i++)
+    int i;
+    for (i = 0; i < 64; i++)
     {
         decoding_table[(unsigned char)base64_chars[i]] = i;
     }
@@ -97,9 +96,8 @@ unsigned char *base64_to_raw(const char *base64_str, size_t *out_len)
 {
     size_t len = strlen(base64_str);
     if (len % 4 != 0)
-        return NULL; // O comprimento deve ser múltiplo de 4.
+        return NULL;
 
-    // Verifica os caracteres de padding '=' no final.
     size_t padding = 0;
     if (len > 0 && base64_str[len - 1] == '=')
         padding++;
@@ -117,7 +115,7 @@ unsigned char *base64_to_raw(const char *base64_str, size_t *out_len)
     size_t i, j;
     for (i = 0, j = 0; i < len;)
     {
-        // Converte cada caractere Base64 para o seu valor de 6 bits.
+
         unsigned int sextet_a = base64_str[i] == '=' ? 0 : decoding_table[(unsigned char)base64_str[i]];
         i++;
         unsigned int sextet_b = base64_str[i] == '=' ? 0 : decoding_table[(unsigned char)base64_str[i]];
@@ -127,10 +125,8 @@ unsigned char *base64_to_raw(const char *base64_str, size_t *out_len)
         unsigned int sextet_d = base64_str[i] == '=' ? 0 : decoding_table[(unsigned char)base64_str[i]];
         i++;
 
-        // Concatena os 4 sextetos em 24 bits
         unsigned int tresBytes = (sextet_a << 18) | (sextet_b << 12) | (sextet_c << 6) | sextet_d;
 
-        // Extraí os bytes (8 bits cada) dos 24 bits formados
         if (j < decoded_len)
             data[j++] = (tresBytes >> 16) & 0xFF;
         if (j < decoded_len)
@@ -143,17 +139,18 @@ unsigned char *base64_to_raw(const char *base64_str, size_t *out_len)
     return data;
 }
 
-// parte 2
+/* parte 2 */
 void xor_cipher(const unsigned char *plaintext,
                 const unsigned char *key,
                 unsigned char *ciphertext,
                 size_t len)
 {
-    for (size_t i = 0; i < len; i++)
+    size_t i;
+    for (i = 0; i < len; i++)
     {
         ciphertext[i] = plaintext[i] ^ key[i];
     }
-    ciphertext[len] = '\0'; // Adiciona o terminador nulo
+    ciphertext[len] = '\0';
 }
 
 void xor_cipher_byte(const unsigned char *in,
@@ -161,22 +158,23 @@ void xor_cipher_byte(const unsigned char *in,
                      unsigned char *out,
                      size_t len)
 {
-    for (size_t i = 0; i < len; i++)
+    size_t i;
+    for (i = 0; i < len; i++)
         out[i] = in[i] ^ key;
 }
 
-// parte 3
+/* parte 3 */
 unsigned char find_xor_key(const unsigned char *ciphertext, size_t len)
 {
     unsigned char best_key = 0;
     double best_score = 0;
 
-    int key; // Declaração movida para fora do loop
+    int key;
     for (key = 0; key < 256; key++)
     {
         double score = 0;
 
-        size_t i; // Declaração movida para fora do loop interno
+        size_t i;
         for (i = 0; i < len; i++)
         {
             char decoded_char = ciphertext[i] ^ key;
@@ -197,7 +195,7 @@ unsigned char find_xor_key(const unsigned char *ciphertext, size_t len)
 
 int main()
 {
-    // parte 1
+    /* parte 1 */
     const char *base64_input = "QWNvcmRhUGVkcmluaG9RdWVob2pldGVtY2FtcGVvbmF0bw==";
 
     size_t raw_len;
@@ -212,7 +210,7 @@ int main()
     free(raw_data);
     free(hex_output);
 
-    // parte 2
+    /* parte 2 */
     const char *hex_plaintext = "41636f72646150656472696e686f517565686f6a6574656d63616d70656f6e61746f";
     const char *hex_key = "0b021e0701003e0a0d060c0807063d1a0b0f0e060a1a020c0f0e03170403010f130e";
 
@@ -232,7 +230,7 @@ int main()
     free(hex_ciphertext);
     free(plaintext);
 
-    // parte 3
+    /* parte 3 */
     const char *hex_ciphertext2 = "072c232c223d2c3e3e2c2328232538202e2c3f3f223d223f2c3c3824072c232c223d2c3e3e2c2328232538202b24212028232c191b1b222e283c382828233f22212c2238393f222e242a2c3f3f223d223f2c2408232c22292c2f22212c3d3f223c38283b2c242c2e222339282e283f002c243e38203d22382e2228202c243e38203e282e38212239283f2024232c002c3e38202122382e223d222928393f222e22232c283e3c3824232c19382922243e3e22272c2b2c373d2c3f3928292c3f223924232c082c3f223924232c272c2b2c373d2c3f392829283b222e281c3828392820242928242c3e392c22202229283f232c3e082220283e202225222028203c38283b243b242c232c3e2e2c3b283f232c3e";
     size_t len2;
     unsigned char *ciphertext2 = hex_to_raw(hex_ciphertext2, &len2);
